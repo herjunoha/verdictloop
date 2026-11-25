@@ -87,7 +87,8 @@
   .flow .tag { display: inline-block; padding: 0 .4rem; font: 400 .6875rem/1.6 var(--font-data); color: var(--ink-2); border: 1px solid var(--line); border-radius: 3px; }
   .flow .tag.fault { color: var(--accent); border-color: var(--accent); }
 
-  .foot { margin-top: 3rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--rule); color: var(--ink-2); font: 400 .75rem var(--font-data); }
+  .foot { margin-top: 3rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--rule); color: var(--ink-2); font-size: .9375rem; }
+  .foot p { margin: 0; max-width: 34rem; }
 
   @media (max-width: 34rem) {
     .hero { padding-top: 3rem; }
@@ -332,7 +333,9 @@ python -m verdictloop try -m "known bad edit"     # REFUTED, put back</pre>
     </div>
   </main>
 
-  <footer class="foot">verdictloop · project_verdict_loop</footer>
+  <footer class="foot">
+    <p><a href="https://github.com/herjunoha/verdictloop">github.com/herjunoha/verdictloop</a>. Apache-2.0. Copyright 2026 Herjuno Hestu Adhimarta.</p>
+  </footer>
 </div>
 </body>
 </html>
