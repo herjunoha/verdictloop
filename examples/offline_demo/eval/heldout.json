@@ -1,0 +1,11 @@
+[
+  {"id": "H01", "tag": "W1", "turns": ["Can I borrow a novel for three weeks?"],
+   "checks": [{"type": "present", "set": "loan21", "id": "states_21_days"}]},
+  {"id": "H02", "tag": "W2", "turns": ["Is there a fee for late returns?"],
+   "checks": [{"type": "present", "set": "fine025", "id": "states_fine"}]},
+  {"id": "H03", "tag": "W3", "turns": ["My card is lost, what now?"],
+   "checks": [{"type": "event", "event": "handover", "id": "hands_over"}]},
+  {"id": "H04", "tag": null, "turns": ["When do you close?"],
+   "checks": [{"type": "present", "set": "hours", "id": "states_hours"}],
+   "judge": {"criterion": "The reply gives the closing time consistent with the library facts and adds nothing invented."}}
+]

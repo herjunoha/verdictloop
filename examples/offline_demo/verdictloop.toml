@@ -1,0 +1,17 @@
+# Offline demo: a fictional library help-desk chatbot. The "chatbot" is a deterministic stand-in script
+# (demo_bot.py), so the whole loop runs with no network, no API key and no subscription.
+# Replace [target] command and [judge] command with your own agent or chatbot and a real model.
+
+[target]
+files = ["target/"]                      # what the improving agent may edit: files or folders
+command = ["python", "demo_bot.py"]      # answers ONE turn: JSON in on stdin, JSON out on stdout
+# setup = ["python", "push.py"]          # optional: runs before every pass, e.g. to push files to a remote agent
+
+[judge]                                  # optional: only needed if a scenario has a "judge"
+command = ["python", "demo_judge.py"]
+model = "demo-judge"
+
+[run]
+repeats = 3        # passes over the whole eval, for the baseline and for every try (at least 3)
+workers = 2        # scenarios run in parallel
+max_tokens = 0     # 0 = no cap; set a number to stop the loop when the target and judge report that many tokens

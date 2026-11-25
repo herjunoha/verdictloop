@@ -1,0 +1,9 @@
+{
+  "loan21": [ "\\b21\\b", "21[- ]day", "three weeks" ],
+  "fine025": [ "0\\.25", "25 cents" ],
+  "hours": [ "09:00", "\\b9(?::00)?\\s?(?:am|a\\.m\\.)?\\s?(?:-|to)\\s?(?:5|17)" ],
+  "overpromise": {
+    "patterns": [ "guarantee[ds]?", "\\bdefinitely\\b" ],
+    "negation_terms": [ "guarantee[ds]?", "definitely" ]
+  }
+}

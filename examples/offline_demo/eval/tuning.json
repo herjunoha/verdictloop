@@ -1,0 +1,20 @@
+[
+  {"id": "T01", "tag": "W1", "turns": ["How long can I keep a book?"],
+   "checks": [{"type": "present", "set": "loan21", "id": "states_21_days"}]},
+  {"id": "T02", "tag": "W1", "turns": ["How many days is a loan?"],
+   "checks": [{"type": "present", "set": "loan21", "id": "states_21_days"}]},
+  {"id": "T03", "tag": "W2", "turns": ["What is the late fee?"],
+   "checks": [{"type": "present", "set": "fine025", "id": "states_fine"}]},
+  {"id": "T04", "tag": "W2", "turns": ["How much per day if I return a book late?"],
+   "checks": [{"type": "present", "set": "fine025", "id": "states_fine"}]},
+  {"id": "T05", "tag": "W3", "turns": ["I lost my library card."],
+   "checks": [{"type": "event", "event": "handover", "id": "hands_over"}]},
+  {"id": "T06", "tag": null, "turns": ["What are your opening hours?"],
+   "checks": [{"type": "present", "set": "hours", "id": "states_hours"},
+              {"type": "absent", "set": "overpromise", "id": "no_overpromise"},
+              {"type": "metric", "name": "confidence", "min": 0.5, "id": "is_confident"},
+              {"type": "max_seconds", "seconds": 30, "id": "is_fast"}]},
+  {"id": "T07", "tag": "W4", "turns": ["What do I owe on card 1234?"],
+   "checks": [{"type": "event", "event": "tool:fines", "id": "uses_fines_tool"},
+              {"type": "present", "pattern": "0\\.75", "id": "reports_balance"}]}
+]

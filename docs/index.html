@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>verdictloop explained</title>
+<meta name="description" content="How verdictloop improves an AI agent or chatbot with a fixed eval and a verdict on every change.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #e9e3d9; --surface: #f1ece3; --sunken: #dcd5c8;
+    --ink: #1f1b17; --ink-2: #57514a; --rule: #cfc8bb; --line: #bab2a3;
+    --accent: #ad3a0b; --radius: 6px; --measure: 64rem;
+    --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-data: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; }
+  a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .skip { position: absolute; left: .75rem; top: -4rem; background: var(--ink); color: var(--page); min-height: 44px; display: inline-flex; align-items: center; padding: 0 1rem; font: 400 .875rem var(--font-data); border-radius: var(--radius); z-index: 10; }
+  .skip:focus { top: .75rem; }
+  .wrap { max-width: var(--measure); margin: 0 auto; padding: 0 1.25rem; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem; padding-top: 1rem; }
+  .brand { display: inline-flex; align-items: center; min-height: 44px; font-weight: 500; letter-spacing: -.01em; text-decoration: none; }
+  .nav { display: flex; flex-wrap: wrap; align-items: center; margin-left: -.625rem; }
+  .nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 .625rem; font: 400 .8125rem var(--font-data); letter-spacing: -.01em; color: var(--ink-2); text-decoration: none; }
+  .nav a:hover { color: var(--ink); text-decoration: underline; }
+
+  .hero { padding: 4rem 0 1rem; }
+  h1 { margin: 0 0 1.25rem; font-size: clamp(2rem, 6.4vw, 2.75rem); line-height: 1.08; font-weight: 400; letter-spacing: -.04em; text-wrap: balance; }
+  .lede { margin: 0; max-width: 34rem; font-size: 1.125rem; color: var(--ink-2); }
+
+  .row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); column-gap: 1.5rem; padding: 1.5rem 0; border-top: 1px solid var(--rule); }
+  .row > :last-child, .row > div > :last-child { margin-bottom: 0; }
+  .row p { margin: 0 0 .75rem; }
+  .list { margin-top: 2.5rem; }
+  .label { margin: 0; font: 400 .75rem/1.9 var(--font-data); color: var(--ink-2); }
+  h2.label { font-weight: 500; color: var(--ink); }
+  h3 { margin: 1.25rem 0 .25rem; font-size: 1rem; font-weight: 500; letter-spacing: -.01em; }
+  ul { margin: 0 0 .75rem; padding-left: 1.1rem; } li { margin: .25rem 0; }
+  code { font: 400 .8125rem var(--font-data); }
+
+  .record { margin: 1rem 0; padding: 1rem 1.125rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .record figcaption, .record .note { margin: 0 0 .5rem; color: var(--ink-2); font: 400 .75rem var(--font-data); }
+  .record pre { margin: 0; font: 400 .8125rem/1.7 var(--font-data); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .hit { color: var(--accent); font-weight: 500; }
+  .fig { margin: 1rem 0; padding: .75rem .75rem .5rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .fig svg { display: block; width: 100%; height: auto; }
+  .fig figcaption { margin: .5rem 0 0; color: var(--ink-2); font: 400 .75rem var(--font-data); }
+  .fig text { font: 400 11px var(--font-data); fill: var(--ink-2); }
+  .fig .t { font: 500 12px var(--font-sans); fill: var(--ink); }
+  .fig .box { fill: var(--page); stroke: var(--line); stroke-width: 1.2; }
+  .fig .box.on { fill: var(--surface); stroke: var(--ink-2); }
+  .fig .ln { fill: none; stroke: var(--ink-2); stroke-width: 1.4; }
+  .fig .head { fill: var(--ink-2); }
+  .fig .axis { stroke: var(--ink-2); stroke-width: 1.5; }
+  .fig .tick { stroke: var(--rule); stroke-width: 1; }
+  .fig .band { fill: var(--sunken); stroke: var(--line); stroke-width: 1; }
+  .fig .mk-fill { fill: var(--ink-2); stroke: var(--ink-2); stroke-width: 1.5; }
+  .fig .mk-empty { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
+  .fig .mk-fault { fill: var(--accent); stroke: var(--accent); stroke-width: 1.5; }
+
+  .strip, .legend { display: flex; flex-wrap: wrap; list-style: none; margin: .75rem 0 .5rem; padding: 0; }
+  .strip { gap: 4px; }
+  .strip li { width: 14px; height: 14px; margin: 0; border-radius: 2px; border: 1.5px solid var(--ink-2); background: var(--ink-2); }
+  .strip .empty, .legend .empty { background: transparent; }
+  .strip .fault, .legend .fault { border-color: var(--accent); background: var(--accent); border-radius: 50%; }
+  .strip .blocked, .legend .blocked { background: repeating-linear-gradient(135deg, var(--ink-2) 0 2px, transparent 2px 4px); }
+  .legend { gap: .25rem 1.25rem; font: 400 .75rem var(--font-data); color: var(--ink-2); }
+  .legend li { display: inline-flex; align-items: center; gap: .4rem; margin: 0; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 2px; border: 1.5px solid var(--ink-2); background: var(--ink-2); }
+
+  .flow { list-style: none; margin: 0 0 .75rem; padding: 0; }
+  .flow li { position: relative; display: block; margin: 0; padding: 0 0 .75rem 1.5rem; font-size: .9375rem; line-height: 1.5; }
+  .flow li:last-child { padding-bottom: 0; }
+  .flow li::before { content: ""; position: absolute; left: .3125rem; top: .5rem; bottom: -.1rem; width: 1px; background: var(--line); }
+  .flow li:last-child::before { display: none; }
+  .flow li::after { content: ""; position: absolute; left: 0; top: .3125rem; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-2); background: var(--surface); }
+  .flow li.gate::after { border-radius: 2px; background: var(--ink); border-color: var(--ink); }
+  .flow .tag { display: inline-block; padding: 0 .4rem; font: 400 .6875rem/1.6 var(--font-data); color: var(--ink-2); border: 1px solid var(--line); border-radius: 3px; }
+  .flow .tag.fault { color: var(--accent); border-color: var(--accent); }
+
+  .foot { margin-top: 3rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--rule); color: var(--ink-2); font: 400 .75rem var(--font-data); }
+
+  @media (max-width: 34rem) {
+    .hero { padding-top: 3rem; }
+    .row { grid-template-columns: minmax(0, 1fr); row-gap: .25rem; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="#top">verdictloop</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#loop">loop</a><a href="#project">project</a><a href="#target">target</a><a href="#eval">eval</a><a href="#verdict">verdict</a><a href="#session">session</a><a href="#run">run</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <h1>An improvement loop for AI agents and chatbots</h1>
+      <p class="lede">A coding agent edits your agent, a fixed set of conversations scores the edit, and the edit is kept only if it is really better. Every change gets one of four verdicts, because a chatbot's score moves by luck.</p>
+    </section>
+
+    <div class="list">
+
+      <section class="row" id="loop">
+        <h2 class="label">loop</h2>
+        <div>
+          <p>An improving agent, such as Claude Code reading <code>program.md</code>, repeats the same five steps. verdictloop does the measuring and the keeping or reverting.</p>
+          <figure class="fig">
+            <svg viewBox="0 0 560 300" role="img" aria-label="The improving agent edits the target and runs try. try asks your agent command to answer each turn, then gives one verdict. VALIDATED keeps the edit; other verdicts put the target back. The agent edits again.">
+              <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker></defs>
+              <rect class="box" x="0" y="10" width="150" height="64" rx="6"/>
+              <text class="t" x="75" y="38" text-anchor="middle">Improving agent</text>
+              <text x="75" y="56" text-anchor="middle">edits target/</text>
+              <rect class="box on" x="205" y="10" width="150" height="64" rx="6"/>
+              <text class="t" x="280" y="38" text-anchor="middle">verdictloop try</text>
+              <text x="280" y="56" text-anchor="middle">3 passes of the eval</text>
+              <rect class="box" x="410" y="10" width="150" height="64" rx="6"/>
+              <text class="t" x="485" y="38" text-anchor="middle">Your agent</text>
+              <text x="485" y="56" text-anchor="middle">one command per turn</text>
+              <path class="ln" d="M150,42 L203,42" marker-end="url(#a1)"/>
+              <path class="ln" d="M355,30 L408,30" marker-end="url(#a1)"/>
+              <path class="ln" d="M408,56 L357,56" marker-end="url(#a1)"/>
+              <path class="ln" d="M280,74 L280,112" marker-end="url(#a1)"/>
+              <rect class="box" x="205" y="114" width="150" height="40" rx="6"/>
+              <text class="t" x="280" y="139" text-anchor="middle">one verdict</text>
+              <path class="ln" d="M250,154 L190,196" marker-end="url(#a1)"/>
+              <path class="ln" d="M310,154 L390,196" marker-end="url(#a1)"/>
+              <rect class="box" x="44" y="198" width="226" height="58" rx="6"/>
+              <rect class="mk-fill" x="56" y="220" width="14" height="14" rx="2"/>
+              <text class="t" x="82" y="224">VALIDATED</text>
+              <text x="82" y="242">kept, new baseline</text>
+              <rect class="box" x="290" y="198" width="270" height="58" rx="6"/>
+              <rect class="mk-empty" x="304" y="220" width="14" height="14" rx="2"/>
+              <text class="t" x="330" y="224">NEUTRAL, REFUTED</text>
+              <text x="330" y="242">target put back</text>
+              <path class="ln" d="M165,256 L165,282 L30,282 L30,78" marker-end="url(#a1)"/>
+              <path class="ln" d="M425,256 L425,282 L165,282"/>
+              <text x="300" y="276" text-anchor="middle">the agent edits again</text>
+            </svg>
+            <figcaption>The improving agent never needs to know how your agent is built. Only the one command does. INFRA_FAIL (the run itself broke) decides nothing: the edit stays and try is run again.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="row" id="project">
+        <h2 class="label">project</h2>
+        <div>
+          <p>Everything lives in one folder, and all state is in files, so a fresh agent session can pick up at any time.</p>
+          <figure class="record">
+            <figcaption>project folder</figcaption>
+<pre>program.md          instructions for the improving agent
+target/             what gets improved
+eval/
+  tuning.json       scenarios the agent optimizes for
+  heldout.json      scenarios it never sees
+  patterns.json     named regex sets (optional)
+  judge.md          judge prompt (optional)
+  facts.md          ground truth for judge (optional)
+verdictloop.toml    how to call your agent and judge
+results.tsv         one line per try
+last_eval.md        failing tuning scenarios, evidence</pre>
+          </figure>
+          <p><code>eval/</code> and <code>verdictloop.toml</code> are fingerprinted when the baseline is taken. If either changes afterwards, <code>try</code> refuses to run, so the agent cannot move the goalposts.</p>
+        </div>
+      </section>
+
+      <section class="row" id="target">
+        <h2 class="label">target</h2>
+        <div>
+          <p>The target is whatever you want to improve: a prompt, a config file, tool descriptions, code. <code>[target] files</code> lists what the agent may edit.</p>
+          <p>Your agent is reached through one command that answers one turn. It can be a few lines that call a model with your prompt, or a few lines that call a deployed service. verdictloop never needs to know which.</p>
+          <figure class="record">
+            <figcaption>the command reads this on stdin</figcaption>
+<pre>{"conversation_id": "t001-1-T05",
+ "scenario": "T05", "turn": 0, "context": {},
+ "messages": [
+   {"role": "user", "text": "I lost my library card."}]}</pre>
+          </figure>
+          <figure class="record">
+            <figcaption>and writes this on stdout (only "reply" is required)</figcaption>
+<pre>{"reply": "Passing you to a person at the front desk.",
+ "events":  ["handover"],
+ "metrics": {"confidence": 0.9},
+ "trace":   "intent: lost card -> handover rule",
+ "tokens":  41}</pre>
+          </figure>
+          <ul>
+            <li><code>messages</code> is the whole conversation so far, so a stateless wrapper works. A stateful agent can key its session on <code>conversation_id</code>.</li>
+            <li><code>events</code> is what the agent did besides talk: a tool call, a handover, a flag. Checks can require or forbid them.</li>
+            <li><code>metrics</code> are numbers the agent reports, such as a confidence. Checks can bound them.</li>
+            <li><code>trace</code> says why the agent did what it did. It is shown to the improving agent so it diagnoses from evidence.</li>
+            <li>If edits must be pushed somewhere before they take effect, <code>[target] setup</code> runs a command before every pass. Point it at a development copy, never production.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="row" id="eval">
+        <h2 class="label">eval</h2>
+        <div>
+          <p>The eval is a set of scripted conversations, split in two. The improving agent sees and optimizes against <code>tuning.json</code>. It never sees <code>heldout.json</code>, which exists to catch edits that only help the tuning scenarios.</p>
+          <figure class="record">
+            <figcaption>one scenario</figcaption>
+<pre>{"id": "T07", "tag": "W4", "context": {"member": "gold"},
+ "opening": "Our reading week starts Monday. Reply INFO.",
+ "turns": ["INFO", "What do I owe on card 1234?"],
+ "checks": [
+   {"type": "present", "pattern": "reading week", "turn": 0},
+   {"type": "event", "event": "tool:fines", "turn": 1},
+   {"type": "metric", "name": "confidence", "min": 0.6},
+   {"type": "max_seconds", "seconds": 10}],
+ "judge": {"criterion": "Friendly, invents no policy."}}</pre>
+          </figure>
+          <h3>Checks</h3>
+          <ul>
+            <li><code>present</code> and <code>absent</code>: a regex, or a named set from <code>patterns.json</code>, over the reply text. A set can list negation terms so "I can't guarantee" does not count as a promise.</li>
+            <li><code>event</code> and <code>no_event</code>: something the agent did, or must not do.</li>
+            <li><code>metric</code>: a reported number within bounds. <code>max_seconds</code>: a reply within a time the engine measures itself.</li>
+            <li><code>turn</code> limits a check to one reply. Without it the check looks at every reply.</li>
+            <li>An optional <code>judge</code> model covers only what a rule cannot decide. It gets its own prompt and facts, which the agent under test never sees.</li>
+          </ul>
+          <h3>Scoring</h3>
+          <p>A scenario scores the share of its checks that passed, and a set scores the mean of its scenarios. A scenario that half works earns half credit, so progress shows before a scenario fully passes. <code>opening</code> is what the agent says first, for broadcasts or greetings; it is shown to the agent and never scored. <code>tag</code> names a known weakness a scenario probes, which lets the loop warn when one group gets worse.</p>
+        </div>
+      </section>
+
+      <section class="row" id="verdict">
+        <h2 class="label">verdict</h2>
+        <div>
+          <p><code>baseline</code> runs the eval three times on the unchanged target. The spread of those runs is the noise. The noise band is the larger of two standard deviations and one scenario, so a single scenario flipping is never evidence.</p>
+          <figure class="fig">
+            <svg viewBox="0 0 560 170" role="img" aria-label="Number line from 0 to 1. The baseline is 0.429 with a noise band of plus or minus 0.143. A bad edit lands at 0.107, below the band. A real fix lands at 0.714, above it.">
+              <rect class="band" x="169" y="46" width="148" height="44" rx="4"/>
+              <text x="243" y="40" text-anchor="middle">noise band, plus or minus 0.143</text>
+              <line class="axis" x1="20" y1="68" x2="540" y2="68"/>
+              <line class="axis" x1="20" y1="60" x2="20" y2="76"/><text x="20" y="96" text-anchor="middle">0</text>
+              <line class="tick" x1="150" y1="62" x2="150" y2="74"/><text x="150" y="96" text-anchor="middle">0.25</text>
+              <line class="tick" x1="410" y1="62" x2="410" y2="74"/><text x="410" y="96" text-anchor="middle">0.75</text>
+              <line class="axis" x1="540" y1="60" x2="540" y2="76"/><text x="540" y="96" text-anchor="middle">1</text>
+              <circle class="mk-fault" cx="76" cy="68" r="7"/>
+              <rect class="mk-empty" x="236" y="61" width="14" height="14" rx="2"/>
+              <rect class="mk-fill" x="384" y="61" width="14" height="14" rx="2"/>
+              <text class="t" x="76" y="126" text-anchor="middle">bad edit 0.107</text>
+              <text x="76" y="142" text-anchor="middle">REFUTED</text>
+              <text class="t" x="243" y="126" text-anchor="middle">baseline 0.429</text>
+              <text x="243" y="142" text-anchor="middle">a blank-line edit: NEUTRAL</text>
+              <text class="t" x="391" y="126" text-anchor="middle">real fix 0.714</text>
+              <text x="391" y="142" text-anchor="middle">VALIDATED</text>
+            </svg>
+            <figcaption>Numbers from the offline demo, which uses a stand-in chatbot. They show how the band works, not a result about any real agent.</figcaption>
+          </figure>
+          <p>After <code>try</code> runs the eval three times on the edited target, the verdict comes from this order of questions.</p>
+          <ol class="flow">
+            <li class="gate">Did fewer than two passes finish? <span class="tag">INFRA_FAIL</span> The run broke. Nothing is decided and broken runs are never counted as zero.</li>
+            <li class="gate">Is the tuning score below the band? <span class="tag fault">REFUTED</span> Worse. The target is put back.</li>
+            <li class="gate">Is it inside the band? <span class="tag">NEUTRAL</span> Indistinguishable from luck. The target is put back.</li>
+            <li class="gate">Above the band: is the held-out score worse than its own band? <span class="tag fault">REFUTED</span> Better on tuning, worse on held-out, which is overfitting.</li>
+            <li>Otherwise <span class="tag">VALIDATED</span> The edit is kept and its passes become the new baseline.</li>
+          </ol>
+          <ul class="legend" aria-label="Legend">
+            <li><i></i>VALIDATED</li><li><i class="empty"></i>NEUTRAL</li><li><i class="fault"></i>REFUTED</li><li><i class="blocked"></i>INFRA_FAIL</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="row" id="session">
+        <h2 class="label">session</h2>
+        <div>
+          <p>Each <code>try</code> prints one block the improving agent reads, and appends one line to <code>results.tsv</code>.</p>
+          <figure class="record">
+            <figcaption>what try prints</figcaption>
+<pre>verdict:   VALIDATED  (better beyond the band, no held-out regression)
+tuning:    delta 0.2857  band 0.1429
+heldout:   delta 0.2500  band 0.2500
+tokens:    3321
+size:      258 bytes (+0% vs the baseline target)
+action:    kept
+failing tuning scenarios (passes failed, of 3); details in last_eval.md:
+  <span class="hit">T03  3/3  states_fine</span></pre>
+          </figure>
+          <p><code>last_eval.md</code> is rewritten after every run. For each tuning scenario that did not fully pass it shows the failed checks, the conversation with its events and metrics, and the trace. Held-out scenarios never appear in it, so the agent can read it freely.</p>
+          <h3>A session over time</h3>
+          <ul class="strip" aria-label="Example session: kept, put back, put back, kept, put back, run failed, kept">
+            <li></li><li class="empty"></li><li class="fault"></li><li></li><li class="empty"></li><li class="blocked"></li><li></li>
+          </ul>
+          <h3>Keeping the loop honest</h3>
+          <ul>
+            <li><strong>reseed</strong> re-measures the kept target and makes that the baseline. A kept edit was chosen because it scored well, partly by luck, so the bar it leaves can be too high.</li>
+            <li><strong>status</strong> shows the tuning and held-out scores of the kept target and their gap. A large gap means overfitting. It also shows how much the target has grown, since a prompt that only ever gets longer is a warning sign.</li>
+            <li><strong>Stop rules</strong>, chosen when the baseline is taken: a maximum number of tries, a target score, and a patience for tries in a row without progress. When one is reached, <code>try</code> prints <code>SESSION COMPLETE</code> and refuses further tries.</li>
+            <li><strong>token cap</strong> in the config stops the loop when your commands report that many tokens.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="row" id="run">
+        <h2 class="label">run</h2>
+        <div>
+          <p>The offline demo is a fictional library help desk with a deterministic stand-in chatbot, so it runs with no model and no key.</p>
+          <figure class="record">
+            <figcaption>from the project folder</figcaption>
+<pre>pip install -e ".[dev]"
+python -m pytest -q
+
+cp -r examples/offline_demo my_demo &amp;&amp; cd my_demo
+python -m verdictloop baseline
+echo IGNORE_POLICY &gt;&gt; target/prompt.md
+python -m verdictloop try -m "known bad edit"     # REFUTED, put back</pre>
+          </figure>
+          <p>To use it on your own agent, write the target command, the scenarios and a <code>program.md</code>, then run <code>baseline</code>. Read the noise band it prints and its warnings: no room to improve means the eval is too easy, and no room to fall means a bad edit could not be shown worse. Calibrate once with a deliberately bad edit and a blank-line edit. The full guide is in <code>README.md</code>, and <code>examples/offline_demo/program.md</code> is a complete instruction file.</p>
+          <h3>Limits</h3>
+          <ul>
+            <li>The fixed-eval check is a fingerprint, not a lock. It stops silent changes to the eval but not edits to the engine itself. Run the engine installed, outside the agent's reach, if that matters.</li>
+            <li>The held-out set is hidden by convention. The agent can read <code>heldout.json</code> and the raw logs if it ignores <code>program.md</code>.</li>
+            <li>Three passes is the minimum for a noise band. A wide band means more repeats or more scenarios.</li>
+            <li>Results hold only for the setup measured: one target, one configuration, small numbers.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="foot">verdictloop · project_verdict_loop</footer>
+</div>
+</body>
+</html>

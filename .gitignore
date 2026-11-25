@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.env*
+logs/
+*.egg-info/
+.pytest_cache/
+.verdictloop/
+results.tsv
+last_eval.md
